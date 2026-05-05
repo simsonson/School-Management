@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// Force Google public DNS — fixes "querySrv ECONNREFUSED" on networks
+// where the default DNS resolver can't handle SRV lookups
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const MAX_RETRIES = 5;
-const RETRY_DELAY_MS = 3000; // start with 3 seconds, doubles each retry
+const RETRY_DELAY_MS = 3000;
 
 const connectDB = async () => {
   let retries = 0;
@@ -16,16 +21,16 @@ const connectDB = async () => {
       console.log(`MongoDB connection attempt ${retries + 1}/${MAX_RETRIES}...`);
 
       const conn = await mongoose.connect(uri, {
-        serverSelectionTimeoutMS: 30000,   // 30s — Atlas free tier can be slow
-        socketTimeoutMS: 45000,            // 45s — keep sockets alive longer
-        connectTimeoutMS: 30000,           // 30s — initial connection timeout
-        maxPoolSize: 10,                   // connection pool
-        heartbeatFrequencyMS: 10000,       // check server health every 10s
+        serverSelectionTimeoutMS: 30000,
+        socketTimeoutMS: 45000,
+        connectTimeoutMS: 30000,
+        maxPoolSize: 10,
+        heartbeatFrequencyMS: 10000,
+        family: 4,  // Force IPv4 — avoids IPv6 resolution issues
       });
 
       console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
 
-      // Monitor connection events
       mongoose.connection.on('error', (err) => {
         console.error('MongoDB connection error:', err.message);
       });
@@ -38,7 +43,7 @@ const connectDB = async () => {
         console.log('✅ MongoDB reconnected.');
       });
 
-      return; // success — exit the retry loop
+      return;
     } catch (error) {
       retries++;
       console.error(`❌ MongoDB connection attempt ${retries} failed: ${error.message}`);
@@ -56,3 +61,4 @@ const connectDB = async () => {
 };
 
 module.exports = connectDB;
+
