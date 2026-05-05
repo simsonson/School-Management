@@ -23,6 +23,10 @@ const classSchema = new mongoose.Schema(
         ref: 'Subject',
       },
     ],
+    timetable: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: true,

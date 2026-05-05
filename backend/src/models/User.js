@@ -34,6 +34,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  parentEmail: {
+    type: String,
+    trim: true,
+  },
+  isApproved: {
+    type: Boolean,
+    default: true,
+  },
   assignedClasses: [
     {
       type: String,

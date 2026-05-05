@@ -185,6 +185,30 @@ exports.createUser = async (req, res, next) => {
   }
 };
 
+// @desc    Bulk create users
+// @route   POST /api/admin/users/bulk
+// @access  Private (Admin)
+exports.bulkCreateUsers = async (req, res, next) => {
+  try {
+    const { users } = req.body;
+    if (!Array.isArray(users)) {
+      return res.status(400).json({ success: false, error: 'Users must be an array' });
+    }
+
+    const createdUsers = await User.insertMany(users.map(u => ({
+      ...u,
+      isApproved: true
+    })));
+
+    res.status(201).json({
+      success: true,
+      data: createdUsers
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // @desc    Update a user
 // @route   PUT /api/admin/users/:id
 // @access  Private (Admin)
@@ -239,6 +263,29 @@ exports.deleteUser = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: {}
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Toggle user approval status
+// @route   PUT /api/admin/users/:id/approve
+// @access  Private (Admin)
+exports.toggleUserApproval = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    user.isApproved = !user.isApproved;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      data: user
     });
   } catch (err) {
     next(err);
@@ -386,6 +433,47 @@ exports.getStats = async (req, res, next) => {
           unpaidFees,
         },
         attendanceRate,
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Get Advanced Dashboard Stats (Charts)
+// @route   GET /api/admin/advanced-stats
+// @access  Private (Admin)
+exports.getAdvancedStats = async (req, res, next) => {
+  try {
+    // Fee trends (Last 6 months)
+    const feeTrends = await Fee.aggregate([
+      {
+        $group: {
+          _id: { $month: '$createdAt' },
+          amount: { $sum: '$amount' },
+        },
+      },
+      { $sort: { '_id': 1 } },
+      { $limit: 6 }
+    ]);
+
+    // Enrollment trends
+    const enrollmentTrends = await User.aggregate([
+      { $match: { role: 'Student' } },
+      {
+        $group: {
+          _id: { $month: '$createdAt' },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { '_id': 1 } }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        feeTrends,
+        enrollmentTrends,
       }
     });
   } catch (err) {

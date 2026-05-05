@@ -1,143 +1,204 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, 
-  GraduationCap, 
-  School, 
-  TrendingUp,
-  Clock,
-  ArrowUpRight
+  UserCheck, 
+  UserPlus, 
+  BookOpen, 
+  TrendingUp, 
+  CreditCard,
+  Calendar,
+  Bell,
+  ArrowUpRight,
+  ShieldCheck,
+  Activity,
+  DollarSign,
+  GraduationCap
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from 'recharts';
 import api from '../lib/apiClient';
 
 const AdminDashboard = () => {
-  const [statsData, setStatsData] = useState({
+  const [stats, setStats] = useState({
     totalStudents: 0,
     totalTeachers: 0,
     totalParents: 0,
+    totalClasses: 0,
+    totalSubjects: 0,
+    feeCollection: {
+      paidFees: 0,
+      unpaidFees: 0
+    },
+    attendanceRate: '0.00'
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchDashboardData = async () => {
       try {
         const res = await api.get('/api/admin/stats');
-        setStatsData(res.data.data);
+        setStats(res.data.data);
       } catch (err) {
-        console.error(err);
+        console.error('Admin Dashboard Error:', err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchStats();
+    fetchDashboardData();
   }, []);
 
-  const stats = [
-    { label: 'Total Students', value: statsData.totalStudents, icon: GraduationCap, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Total Teachers', value: statsData.totalTeachers, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Total Parents', value: statsData.totalParents, icon: Users, color: 'text-orange-600', bg: 'bg-orange-50' },
-    { label: 'Avg Attendance', value: `${statsData.attendanceRate || 0}%`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+    </div>
+  );
+
+  const statCards = [
+    { label: 'Total Students', value: stats.totalStudents, icon: GraduationCap, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
+    { label: 'Active Teachers', value: stats.totalTeachers, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/30' },
+    { label: 'Classes', value: stats.totalClasses, icon: BookOpen, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/30' },
+    { label: 'Attendance', value: `${stats.attendanceRate}%`, icon: Activity, color: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-900/30' },
+  ];
+
+  // Mock fee collection trend for visualization
+  const feeTrendData = [
+    { month: 'Jan', amount: 45000 },
+    { month: 'Feb', amount: 52000 },
+    { month: 'Mar', amount: 48000 },
+    { month: 'Apr', amount: 61000 },
+    { month: 'May', amount: 55000 },
+    { month: 'Jun', amount: 67000 },
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Section */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome Back, Admin!</h1>
-          <p className="text-gray-500">Here's what's happening in your school today.</p>
+          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Admin Console</h1>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">Enterprise management for institutional excellence.</p>
         </div>
-        <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-xl font-medium transition-all shadow-lg shadow-indigo-200">
-          Generate Report
-        </button>
+        <div className="flex items-center gap-3">
+          <Link to="/admin/reports" className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-xl shadow-indigo-100 dark:shadow-none font-black text-sm hover:bg-indigo-700 transition-all active:scale-95">
+            Generate School Report
+          </Link>
+        </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
-          <div key={stat.label} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-xl ${stat.bg} ${stat.color} transition-colors`}>
-                <stat.icon className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg flex items-center gap-1">
-                <ArrowUpRight className="w-3 h-3" />
-                +2.5%
-              </span>
+        {statCards.map((stat, i) => (
+          <div key={i} className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm group hover:shadow-md transition-all">
+            <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+              <stat.icon className="w-6 h-6" />
             </div>
-            <p className="text-sm font-medium text-gray-400">{stat.label}</p>
-            <h3 className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</h3>
+            <p className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{stat.label}</p>
+            <h3 className="text-2xl font-black text-gray-900 dark:text-white mt-1">{stat.value}</h3>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-50 flex items-center justify-between">
-            <h3 className="font-bold text-gray-900">Recent Registrations</h3>
-            <button className="text-indigo-600 text-sm font-bold hover:underline">View All</button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Fee Collection Chart */}
+        <div className="lg:col-span-2 bg-white dark:bg-gray-900 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-xl font-black text-gray-900 dark:text-white">Financial Trend</h3>
+            <div className="flex items-center gap-4">
+               <span className="flex items-center gap-2 text-emerald-500 font-bold text-xs bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">
+                Paid: {stats.feeCollection.paidFees}
+              </span>
+              <span className="flex items-center gap-2 text-amber-500 font-bold text-xs bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">
+                Unpaid: {stats.feeCollection.unpaidFees}
+              </span>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Student</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Class</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {[
-                  { name: 'John Doe', class: 'Grade 10-A', date: '2 hours ago', status: 'Active' },
-                  { name: 'Sarah Smith', class: 'Grade 8-B', date: '5 hours ago', status: 'Pending' },
-                  { name: 'Mike Ross', class: 'Grade 12-C', date: 'Yesterday', status: 'Active' },
-                ].map((row, i) => (
-                  <tr key={i} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
-                          {row.name.charAt(0)}
-                        </div>
-                        <span className="text-sm font-medium text-gray-900">{row.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{row.class}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{row.date}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                        row.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'
-                      }`}>
-                        {row.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={feeTrendData}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" strokeOpacity={0.1} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', background: '#fff' }}
+                />
+                <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={4} fillOpacity={1} fill="url(#colorRevenue)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Quick Notices */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h3 className="font-bold text-gray-900 mb-6">Upcoming Events</h3>
-          <div className="space-y-6">
-            {[
-              { title: 'Annual Sports Meet', date: 'May 15, 2026', type: 'Event' },
-              { title: 'Parent-Teacher Meeting', date: 'May 20, 2026', type: 'Meeting' },
-              { title: 'Final Exams Start', date: 'June 01, 2026', type: 'Academic' },
-            ].map((event, i) => (
-              <div key={i} className="flex gap-4">
-                <div className="flex-shrink-0 w-12 h-12 bg-indigo-50 rounded-xl flex flex-col items-center justify-center text-indigo-600">
-                  <Clock className="w-5 h-5" />
+        {/* Quick Actions */}
+        <div className="bg-white dark:bg-gray-900 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-xl font-black text-gray-900 dark:text-white">Quick Management</h3>
+            <ShieldCheck className="w-6 h-6 text-indigo-500" />
+          </div>
+          <div className="grid grid-cols-1 gap-4 flex-1">
+            <Link to="/admin/students" className="group flex items-center justify-between p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 hover:bg-indigo-600 transition-all border border-transparent hover:border-indigo-100">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 text-indigo-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                  <UserPlus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-gray-900">{event.title}</h4>
-                  <p className="text-xs text-gray-500 mt-1">{event.date} • {event.type}</p>
+                  <p className="text-sm font-black text-gray-900 dark:text-white group-hover:text-white transition-colors">Add Student</p>
+                  <p className="text-[10px] font-bold text-gray-400 group-hover:text-indigo-100 transition-colors">Individual or Bulk</p>
                 </div>
               </div>
-            ))}
+              <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-white transition-colors" />
+            </Link>
+            <Link to="/admin/parents" className="group flex items-center justify-between p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 hover:bg-emerald-600 transition-all border border-transparent hover:border-emerald-100">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 text-emerald-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-gray-900 dark:text-white group-hover:text-white transition-colors">Parents</p>
+                  <p className="text-[10px] font-bold text-gray-400 group-hover:text-emerald-100 transition-colors">Manage links</p>
+                </div>
+              </div>
+              <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-white transition-colors" />
+            </Link>
+            <Link to="/admin/announcements" className="group flex items-center justify-between p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 hover:bg-purple-600 transition-all border border-transparent hover:border-purple-100">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 text-purple-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-gray-900 dark:text-white group-hover:text-white transition-colors">Broadcast</p>
+                  <p className="text-[10px] font-bold text-gray-400 group-hover:text-purple-100 transition-colors">Send notices</p>
+                </div>
+              </div>
+              <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-white transition-colors" />
+            </Link>
+            <Link to="/admin/fees" className="group flex items-center justify-between p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 hover:bg-orange-600 transition-all border border-transparent hover:border-orange-100">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 text-orange-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                  <DollarSign className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-gray-900 dark:text-white group-hover:text-white transition-colors">Finance</p>
+                  <p className="text-[10px] font-bold text-gray-400 group-hover:text-orange-100 transition-colors">Fees & Revenue</p>
+                </div>
+              </div>
+              <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-white transition-colors" />
+            </Link>
           </div>
-          <button className="w-full mt-8 py-3 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 font-medium hover:border-indigo-400 hover:text-indigo-600 transition-all">
-            + Add New Event
-          </button>
         </div>
       </div>
     </div>

@@ -31,7 +31,10 @@ const {
   getTeacherAllocations,
   createTeacherAllocation,
   deleteTeacherAllocation,
-  getAdminReportOverview
+  getAdminReportOverview,
+  toggleUserApproval,
+  getAdvancedStats,
+  bulkCreateUsers
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 const { requireFields, validateRole } = require('../middleware/validate');
@@ -42,6 +45,7 @@ router.use(protect);
 router.use(authorize('Admin'));
 
 router.get('/stats', getStats);
+router.get('/advanced-stats', getAdvancedStats);
 router.get('/reports/overview', getAdminReportOverview);
 
 router.route('/fees')
@@ -83,11 +87,15 @@ router.route('/users')
     createUser
   );
 
+router.post('/users/bulk', bulkCreateUsers);
+
 router.get('/users/:role', getUsersByRole);
 
 router.route('/users/:id')
   .put(updateUser)
   .delete(deleteUser);
+
+router.put('/users/:id/approve', toggleUserApproval);
 
 router.route('/students')
   .get(getStudents)

@@ -1,23 +1,28 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { GraduationCap, Lock, Mail, AlertCircle } from 'lucide-react';
+import { GraduationCap, Lock, Mail, User, AlertCircle } from 'lucide-react';
 import api from '../lib/apiClient';
 
-const Login = () => {
+const Register = () => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, error } = useAuth();
-  const navigate = useNavigate();
+  const [role, setRole] = useState('Student');
   const [loading, setLoading] = useState(false);
-  const [oauthError, setOauthError] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     try {
-      const user = await login(email, password);
-      // Redirect based on role
+      const res = await api.post('/api/auth/register', { name, email, password, role });
+      const { token, user } = res.data;
+      
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
       const rolePaths = {
         Admin: '/admin',
         Teacher: '/teacher',
@@ -27,23 +32,9 @@ const Login = () => {
       };
       navigate(rolePaths[user.role] || '/');
     } catch (err) {
-      // Error handled by AuthContext
+      setError(err.response?.data?.error || 'Registration failed');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSocialLogin = async (provider) => {
-    setOauthError('');
-    try {
-      const redirectUri = `${window.location.origin}/auth/callback/${provider}`;
-      const res = await api.get(`/api/auth/oauth/${provider}`, { params: { redirectUri } });
-      const redirectUrl = res.data?.data?.url;
-      if (redirectUrl) {
-        window.location.href = redirectUrl;
-      }
-    } catch (err) {
-      setOauthError(err.response?.data?.error || `${provider} login unavailable`);
     }
   };
 
@@ -54,8 +45,8 @@ const Login = () => {
           <div className="inline-flex items-center justify-center p-3 bg-indigo-500 rounded-xl mb-4 shadow-lg">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">EduManage</h1>
-          <p className="text-indigo-200">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
+          <p className="text-indigo-200">Join EduManage today</p>
         </div>
 
         {error && (
@@ -65,7 +56,22 @@ const Login = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-indigo-200 mb-2">Full Name</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400" />
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                placeholder="John Doe"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-indigo-200 mb-2">Email Address</label>
             <div className="relative">
@@ -96,37 +102,33 @@ const Login = () => {
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-indigo-200 mb-2">I am a...</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full bg-indigo-900/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none"
+            >
+              <option value="Student">Student</option>
+              <option value="Teacher">Teacher</option>
+              <option value="Parent">Parent</option>
+              <option value="Principal">Principal</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-3 rounded-xl shadow-lg transform active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-3 rounded-xl shadow-lg transform active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Creating Account...' : 'Sign Up'}
           </button>
         </form>
 
-        <div className="mt-6">
-          <p className="text-xs text-indigo-200 mb-3 text-center">Or continue with</p>
-          <div className="grid grid-cols-1 gap-2">
-            <button onClick={() => handleSocialLogin('google')} className="w-full py-2.5 rounded-xl bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all">
-              Continue with Google
-            </button>
-            <button onClick={() => handleSocialLogin('microsoft')} className="w-full py-2.5 rounded-xl bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all">
-              Continue with Microsoft
-            </button>
-            <button onClick={() => handleSocialLogin('apple')} className="w-full py-2.5 rounded-xl bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all">
-              Continue with Apple
-            </button>
-          </div>
-          {oauthError && <p className="text-xs text-red-300 mt-2 text-center">{oauthError}</p>}
-        </div>
-
-        <div className="mt-8 pt-6 border-t border-white/10 text-center space-y-4">
+        <div className="mt-8 pt-6 border-t border-white/10 text-center">
           <p className="text-sm text-indigo-300">
-            Don't have an account? <Link to="/register" className="text-indigo-400 hover:text-white font-medium underline underline-offset-4">Sign Up</Link>
-          </p>
-          <p className="text-sm text-indigo-300">
-            Forgot your password? <a href="#" className="text-indigo-400 hover:text-white font-medium underline underline-offset-4">Contact Admin</a>
+            Already have an account? <Link to="/login" className="text-indigo-400 hover:text-white font-medium underline underline-offset-4">Sign In</Link>
           </p>
         </div>
       </div>
@@ -134,4 +136,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;

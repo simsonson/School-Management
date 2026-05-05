@@ -123,6 +123,38 @@ exports.updateMarks = async (req, res, next) => {
   }
 };
 
+// @desc    Bulk Add or Update marks for multiple students
+// @route   POST /api/teacher/marks/bulk
+// @access  Private (Teacher)
+exports.bulkUpdateMarks = async (req, res, next) => {
+  try {
+    const { marks, subject, examName, totalMarks } = req.body;
+    
+    if (!Array.isArray(marks)) {
+      return res.status(400).json({ success: false, error: 'Marks must be an array' });
+    }
+
+    const markOperations = marks.map((m) => ({
+      student: m.studentId,
+      subject,
+      examName,
+      score: m.score,
+      totalMarks: totalMarks || 100,
+      teacher: req.user.id,
+      date: new Date()
+    }));
+
+    const result = await Mark.insertMany(markOperations);
+
+    res.status(201).json({
+      success: true,
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // @desc    Get all students (to select for marks)
 // @route   GET /api/teacher/students
 // @access  Private (Teacher)
@@ -130,7 +162,9 @@ exports.getStudents = async (req, res, next) => {
   try {
     const allowedClasses = await getTeacherClassSet(req.user.id);
     const query = { role: 'Student' };
-    if (allowedClasses.size > 0) {
+    if (req.query.className) {
+      query.className = req.query.className;
+    } else if (allowedClasses.size > 0) {
       query.className = { $in: Array.from(allowedClasses) };
     }
     const students = await User.find(query);

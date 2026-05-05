@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Trash2, 
+  Edit2,
   X,
   Layers,
-  Users
+  Users,
+  Check
 } from 'lucide-react';
 import api from '../lib/apiClient';
 
@@ -14,7 +16,8 @@ const ClassManagement = () => {
   const [teachers, setTeachers] = useState([]);
   const [allocations, setAllocations] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newClass, setNewClass] = useState({ name: '', section: '', subjects: [], classTeacher: '' });
+  const [editingId, setEditingId] = useState(null);
+  const [newClass, setNewClass] = useState({ name: '', section: '', subjects: [], classTeacher: '', timetable: '' });
   const [newSubject, setNewSubject] = useState({ name: '', code: '' });
   const [newAllocation, setNewAllocation] = useState({ teacher: '', className: '', subject: '' });
 
@@ -39,23 +42,49 @@ const ClassManagement = () => {
     fetchData();
   }, []);
 
-  const handleAddClass = async (e) => {
+  const handleOpenModal = (cls = null) => {
+    if (cls) {
+      setEditingId(cls._id);
+      setNewClass({
+        name: cls.name,
+        section: cls.section || '',
+        subjects: cls.subjects.map(s => s._id || s),
+        classTeacher: cls.classTeacher?._id || cls.classTeacher || '',
+        timetable: cls.timetable || ''
+      });
+    } else {
+      setEditingId(null);
+      setNewClass({ name: '', section: '', subjects: [], classTeacher: '', timetable: '' });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSaveClass = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/api/admin/classes', {
+      const payload = {
         ...newClass,
         classTeacher: newClass.classTeacher || undefined,
-      });
+      };
+
+      if (editingId) {
+        await api.put(`/api/admin/classes/${editingId}`, payload);
+      } else {
+        await api.post('/api/admin/classes', payload);
+      }
+
       setIsModalOpen(false);
-      setNewClass({ name: '', section: '', subjects: [], classTeacher: '' });
+      setEditingId(null);
+      setNewClass({ name: '', section: '', subjects: [], classTeacher: '', timetable: '' });
       fetchData();
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.error || 'Failed to create class');
+      alert(err.response?.data?.error || 'Failed to save class');
     }
   };
 
   const deleteClass = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this class?')) return;
     try {
       await api.delete(`/api/admin/classes/${id}`);
       fetchData();
@@ -63,6 +92,15 @@ const ClassManagement = () => {
       console.error(err);
       alert('Failed to delete class');
     }
+  };
+
+  const toggleSubject = (subjectId) => {
+    setNewClass(prev => {
+      const subjects = prev.subjects.includes(subjectId)
+        ? prev.subjects.filter(id => id !== subjectId)
+        : [...prev.subjects, subjectId];
+      return { ...prev, subjects };
+    });
   };
 
   const addSubject = async (e) => {
@@ -104,7 +142,7 @@ const ClassManagement = () => {
           <p className="text-gray-500">Organize school classes and their curriculum.</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => handleOpenModal()}
           className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all"
         >
           <Plus className="w-5 h-5" />
@@ -122,35 +160,59 @@ const ClassManagement = () => {
                 </div>
                 <h3 className="font-bold text-gray-900">{cls.name}{cls.section ? ` - ${cls.section}` : ''}</h3>
               </div>
-              <button 
-                onClick={() => deleteClass(cls._id)}
-                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => handleOpenModal(cls)}
+                  className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all"
+                  title="Edit Class"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => deleteClass(cls._id)}
+                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                  title="Delete Class"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <div className="p-6 space-y-4">
               <div>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Class Teacher</p>
-                <p className="text-sm text-gray-700">{cls.classTeacher?.name || 'Not assigned'}</p>
+                <p className="text-sm text-gray-700 font-medium">{cls.classTeacher?.name || 'Not assigned'}</p>
               </div>
               <div>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Subjects</p>
                 <div className="flex flex-wrap gap-2">
                   {cls.subjects.map((sub) => (
-                    <span key={sub._id || sub} className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">
+                    <span key={sub._id || sub} className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg uppercase tracking-tight">
                       {sub.name || sub}
                     </span>
                   ))}
+                  {cls.subjects.length === 0 && <span className="text-xs text-gray-400 italic">No subjects assigned</span>}
                 </div>
               </div>
               <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                <div className="flex items-center gap-2 text-gray-500 text-sm">
+                <div className="flex items-center gap-2 text-gray-500 text-xs">
                   <Users className="w-4 h-4" />
                   <span>Roster in student module</span>
                 </div>
                 <span className="text-indigo-600 text-xs font-bold">Subjects: {cls.subjects.length}</span>
               </div>
+              {cls.timetable && (
+                <div className="mt-4">
+                  <a 
+                    href={cls.timetable} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    View Timetable
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -163,22 +225,22 @@ const ClassManagement = () => {
             <input
               required
               placeholder="Subject name"
-              className="px-3 py-2 rounded-xl border border-gray-200"
+              className="px-3 py-2 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
               value={newSubject.name}
               onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })}
             />
             <input
               required
               placeholder="Code (e.g. MATH)"
-              className="px-3 py-2 rounded-xl border border-gray-200"
+              className="px-3 py-2 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
               value={newSubject.code}
               onChange={(e) => setNewSubject({ ...newSubject, code: e.target.value })}
             />
-            <button className="col-span-2 bg-indigo-600 text-white rounded-xl py-2 font-bold">Add Subject</button>
+            <button className="col-span-2 bg-indigo-600 text-white rounded-xl py-2 font-bold hover:bg-indigo-700 transition-all">Add Subject</button>
           </form>
           <div className="flex flex-wrap gap-2">
             {subjects.map((s) => (
-              <span key={s._id} className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md">{s.name} ({s.code})</span>
+              <span key={s._id} className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md font-medium">{s.name} ({s.code})</span>
             ))}
           </div>
         </div>
@@ -188,7 +250,7 @@ const ClassManagement = () => {
           <form onSubmit={createAllocation} className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <select
               required
-              className="px-3 py-2 rounded-xl border border-gray-200"
+              className="px-3 py-2 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
               value={newAllocation.teacher}
               onChange={(e) => setNewAllocation({ ...newAllocation, teacher: e.target.value })}
             >
@@ -197,7 +259,7 @@ const ClassManagement = () => {
             </select>
             <select
               required
-              className="px-3 py-2 rounded-xl border border-gray-200"
+              className="px-3 py-2 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
               value={newAllocation.className}
               onChange={(e) => setNewAllocation({ ...newAllocation, className: e.target.value })}
             >
@@ -206,20 +268,20 @@ const ClassManagement = () => {
             </select>
             <select
               required
-              className="px-3 py-2 rounded-xl border border-gray-200"
+              className="px-3 py-2 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
               value={newAllocation.subject}
               onChange={(e) => setNewAllocation({ ...newAllocation, subject: e.target.value })}
             >
               <option value="">Subject</option>
               {subjects.map((s) => <option key={s._id} value={s.name}>{s.name}</option>)}
             </select>
-            <button className="md:col-span-3 bg-emerald-600 text-white rounded-xl py-2 font-bold">Allocate</button>
+            <button className="md:col-span-3 bg-emerald-600 text-white rounded-xl py-2 font-bold hover:bg-emerald-700 transition-all">Allocate</button>
           </form>
           <div className="space-y-2">
             {allocations.map((a) => (
-              <div key={a._id} className="flex items-center justify-between p-2 rounded-xl border border-gray-100 bg-gray-50">
-                <span className="text-xs text-gray-700">{a.teacher?.name}{' -> '}{a.className}{' -> '}{a.subject}</span>
-                <button onClick={() => removeAllocation(a._id)} className="text-xs text-red-600 font-bold">Remove</button>
+              <div key={a._id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
+                <span className="text-xs font-medium text-gray-700">{a.teacher?.name}{' -> '}<span className="text-indigo-600">{a.className}</span>{' -> '}<span className="text-emerald-600">{a.subject}</span></span>
+                <button onClick={() => removeAllocation(a._id)} className="text-xs text-red-600 font-bold hover:underline">Remove</button>
               </div>
             ))}
           </div>
@@ -229,14 +291,14 @@ const ClassManagement = () => {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-gray-50 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-gray-900">Add New Class</h3>
+              <h3 className="text-xl font-bold text-gray-900">{editingId ? 'Edit Class' : 'Add New Class'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
                 <X className="w-5 h-5 text-gray-400" />
               </button>
             </div>
-            <form onSubmit={handleAddClass} className="p-6 space-y-4">
+            <form onSubmit={handleSaveClass} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Class Name</label>
                 <input
@@ -259,6 +321,16 @@ const ClassManagement = () => {
                 />
               </div>
               <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Timetable URL</label>
+                <input
+                  type="url"
+                  placeholder="https://example.com/timetable.pdf"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={newClass.timetable}
+                  onChange={(e) => setNewClass({...newClass, timetable: e.target.value})}
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Class Teacher</label>
                 <select
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500"
@@ -274,30 +346,36 @@ const ClassManagement = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Subjects</label>
-                <select
-                  multiple
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500 min-h-28"
-                  value={newClass.subjects}
-                  onChange={(e) =>
-                    setNewClass({
-                      ...newClass,
-                      subjects: Array.from(e.target.selectedOptions).map((opt) => opt.value),
-                    })
-                  }
-                >
-                  {subjects.map((subject) => (
-                    <option key={subject._id} value={subject._id}>
-                      {subject.name} ({subject.code})
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Subjects (Multiple Select)</label>
+                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1">
+                  {subjects.map((subject) => {
+                    const isSelected = newClass.subjects.includes(subject._id);
+                    return (
+                      <button
+                        key={subject._id}
+                        type="button"
+                        onClick={() => toggleSubject(subject._id)}
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-all text-left ${
+                          isSelected 
+                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-100' 
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-300'
+                        }`}
+                      >
+                        <span className="text-xs font-bold truncate">{subject.name}</span>
+                        {isSelected && <Check className="w-3 h-3 flex-shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-[10px] text-gray-400 font-medium uppercase tracking-wider">
+                  Selected: {newClass.subjects.length} subjects
+                </p>
               </div>
               <button 
                 type="submit"
-                className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100"
+                className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all active:scale-[0.98]"
               >
-                Save Class
+                {editingId ? 'Update Class' : 'Save Class'}
               </button>
             </form>
           </div>

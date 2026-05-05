@@ -13,7 +13,10 @@ import {
   LogOut,
   ChevronRight,
   Menu,
-  X
+  X,
+  Sun,
+  Moon,
+  ShieldCheck
 } from 'lucide-react';
 import api from '../lib/apiClient';
 
@@ -22,15 +25,27 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [notifications, setNotifications] = React.useState([]);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   React.useEffect(() => {
-    api.get('/api/notifications')
-      .then((res) => setNotifications(res.data.data || []))
-      .catch(() => setNotifications([]));
-  }, [user?.role]);
+    const savedMode = localStorage.getItem('darkMode') === 'true';
+    setIsDarkMode(savedMode);
+    if (savedMode) document.documentElement.classList.add('dark');
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    localStorage.setItem('darkMode', newMode);
+    if (newMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -42,8 +57,11 @@ const Layout = ({ children }) => {
       { name: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
       { name: 'Students', icon: GraduationCap, path: '/admin/students' },
       { name: 'Teachers', icon: Users, path: '/admin/teachers' },
+      { name: 'Parents', icon: Users, path: '/admin/parents' },
+      { name: 'Admins', icon: ShieldCheck, path: '/admin/admins' },
       { name: 'Classes', icon: BookOpen, path: '/admin/classes' },
       { name: 'Fees', icon: CreditCard, path: '/admin/fees' },
+      { name: 'Announcements', icon: Bell, path: '/admin/announcements' },
       { name: 'Reports', icon: ClipboardList, path: '/admin/reports' },
     ],
     Teacher: [
@@ -83,12 +101,12 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className={`min-h-screen ${isDarkMode ? 'dark bg-gray-950' : 'bg-gray-50'} flex transition-colors duration-300`}>
       {/* Sidebar */}
       <aside 
         className={`${
           isSidebarOpen ? 'w-64' : 'w-20'
-        } bg-indigo-900 text-white transition-all duration-300 flex flex-col fixed h-full z-20`}
+        } ${isDarkMode ? 'bg-gray-900 border-r border-gray-800' : 'bg-indigo-900'} text-white transition-all duration-300 flex flex-col fixed h-full z-20`}
       >
         <div className="p-6 flex items-center justify-between">
           {isSidebarOpen && (
@@ -148,8 +166,15 @@ const Layout = ({ children }) => {
           
           <div className="flex items-center gap-6">
             <button
+              onClick={toggleDarkMode}
+              className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-800 rounded-lg transition-all"
+            >
+              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+
+            <button
               onClick={() => setShowNotifications((prev) => !prev)}
-              className="relative p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+              className="relative p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-800 rounded-lg transition-all"
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>}

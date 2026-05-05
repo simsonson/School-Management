@@ -21,6 +21,8 @@ import StudentMarks from './pages/StudentMarks';
 import StudentAttendance from './pages/StudentAttendance';
 import OAuthCallback from './pages/OAuthCallback';
 import ReportsOverview from './pages/ReportsOverview';
+import Register from './pages/Register';
+import Announcements from './pages/Announcements';
 
 // Mock Dashboard for other roles
 const PlaceholderDashboard = ({ role }) => (
@@ -36,6 +38,7 @@ const App = () => {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/auth/callback/:provider" element={<OAuthCallback />} />
           
           {/* Admin Routes */}
@@ -47,8 +50,10 @@ const App = () => {
                   <Route path="/students" element={<UserManagement role="Student" />} />
                   <Route path="/teachers" element={<UserManagement role="Teacher" />} />
                   <Route path="/parents" element={<UserManagement role="Parent" />} />
+                  <Route path="/admins" element={<UserManagement role="Admin" />} />
                   <Route path="/classes" element={<ClassManagement />} />
                   <Route path="/fees" element={<FeeManagement />} />
+                  <Route path="/announcements" element={<Announcements />} />
                   <Route path="/reports" element={<ReportsOverview role="Admin" />} />
                 </Routes>
               </Layout>

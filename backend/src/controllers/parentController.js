@@ -34,3 +34,33 @@ exports.getChildData = async (req, res, next) => {
     next(err);
   }
 };
+
+// @desc    Get child academic performance (Charts)
+// @route   GET /api/parent/performance
+// @access  Private (Parent)
+exports.getPerformance = async (req, res, next) => {
+  try {
+    const studentProfile = await Student.findOne({ parentId: req.user.id });
+    if (!studentProfile) {
+      return res.status(404).json({ success: false, error: 'Child not found' });
+    }
+
+    const marks = await Mark.aggregate([
+      { $match: { student: studentProfile.user } },
+      {
+        $group: {
+          _id: '$subject',
+          avgScore: { $avg: '$score' },
+          totalMarks: { $first: '$totalMarks' }
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: marks
+    });
+  } catch (err) {
+    next(err);
+  }
+};

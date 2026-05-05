@@ -2,6 +2,12 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
+const normalizeRole = (role) => {
+  const allowed = ['Admin', 'Teacher', 'Student', 'Parent', 'Principal'];
+  const matched = allowed.find((r) => r.toLowerCase() === String(role || '').toLowerCase());
+  return matched || 'Student';
+};
+
 // Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
   // Create token
@@ -16,7 +22,7 @@ const sendTokenResponse = (user, statusCode, res) => {
       id: user._id,
       name: user.name,
       email: user.email,
-      role: user.role,
+      role: normalizeRole(user.role),
     }
   });
 };
@@ -35,9 +41,9 @@ exports.register = async (req, res, next) => {
     // Create user
     const user = await User.create({
       name,
-      email,
+      email: String(email).trim().toLowerCase(),
       password,
-      role,
+      role: normalizeRole(role),
     });
 
     sendTokenResponse(user, 201, res);
@@ -60,7 +66,8 @@ exports.login = async (req, res, next) => {
     }
 
     // Check for user
-    const user = await User.findOne({ email }).select('+password');
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
     if (!user) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
@@ -284,6 +291,7 @@ exports.oauthCallback = async (req, res, next) => {
         email,
         password: randomPassword,
         role: 'Student',
+        isApproved: false, // New social signups require approval
       });
     }
 

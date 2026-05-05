@@ -12,31 +12,50 @@ import api from '../lib/apiClient';
 
 const AttendanceManagement = () => {
   const [students, setStudents] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [selectedClass, setSelectedClass] = useState('');
   const [attendanceData, setAttendanceData] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState(null);
 
+  const fetchStudents = async (className) => {
+    try {
+      const params = className ? { className } : undefined;
+      const res = await api.get('/api/teacher/students', { params });
+      setStudents(res.data.data);
+      
+      // Initialize attendance state
+      const initialData = {};
+      res.data.data.forEach((s) => {
+        initialData[s._id] = 'Present';
+      });
+      setAttendanceData(initialData);
+    } catch (err) {
+      console.error(err);
+      setStudents([]);
+      setAttendanceData({});
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchStudents = async () => {
+    const bootstrap = async () => {
       try {
-        const res = await api.get('/api/teacher/students');
-        setStudents(res.data.data);
-        
-        // Initialize attendance state
-        const initialData = {};
-        res.data.data.forEach(s => {
-          initialData[s._id] = 'Present';
-        });
-        setAttendanceData(initialData);
+        const classRes = await api.get('/api/teacher/classes');
+        const classList = classRes.data.data || [];
+        setClasses(classList);
+        const defaultClass = classList[0]?.value || '';
+        setSelectedClass(defaultClass);
+        await fetchStudents(defaultClass);
       } catch (err) {
         console.error(err);
-      } finally {
         setLoading(false);
       }
     };
-    fetchStudents();
+    bootstrap();
   }, []);
 
   const handleStatusChange = (studentId, status) => {
@@ -44,13 +63,17 @@ const AttendanceManagement = () => {
   };
 
   const submitAttendance = async () => {
+    if (!selectedClass) {
+      setStatus({ type: 'error', message: 'Please select a class first' });
+      return;
+    }
     try {
       const promises = Object.entries(attendanceData).map(([studentId, status]) => {
         return api.post('/api/teacher/attendance', {
           studentId,
           status,
           date,
-          className: 'Grade 10-A' // Mock class
+          className: selectedClass,
         });
       });
 
@@ -72,7 +95,24 @@ const AttendanceManagement = () => {
           <h1 className="text-2xl font-bold text-gray-900">Attendance Management</h1>
           <p className="text-gray-500">Mark daily attendance for your classes.</p>
         </div>
-        <div className="flex items-center gap-4 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
+        <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
+          <select
+            value={selectedClass}
+            onChange={async (e) => {
+              const cls = e.target.value;
+              setSelectedClass(cls);
+              setLoading(true);
+              await fetchStudents(cls);
+            }}
+            className="outline-none text-sm font-bold text-gray-700 p-2 border-r border-gray-100"
+          >
+            <option value="">Select class</option>
+            {classes.map((c) => (
+              <option key={c._id} value={c.value}>
+                {c.name}{c.section ? ` - ${c.section}` : ''}
+              </option>
+            ))}
+          </select>
           <CalendarIcon className="w-5 h-5 text-gray-400 ml-2" />
           <input 
             type="date" 
@@ -120,11 +160,11 @@ const AttendanceManagement = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-                        {student.name.charAt(0)}
+                        {student.name?.charAt(0) || '?'}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-gray-900">{student.name}</p>
-                        <p className="text-xs text-gray-500">ID: {student._id.slice(-6).toUpperCase()}</p>
+                        <p className="text-sm font-bold text-gray-900">{student.name || 'Unknown'}</p>
+                        <p className="text-xs text-gray-500">ID: {student._id?.slice(-6).toUpperCase() || 'N/A'}</p>
                       </div>
                     </div>
                   </td>

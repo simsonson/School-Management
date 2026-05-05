@@ -13,7 +13,30 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow server-to-server requests and local tools with no Origin header
+      if (!origin) return callback(null, true);
+
+      const isExplicitlyAllowed = allowedOrigins.includes(origin);
+      const allowVercelPreviews =
+        String(process.env.CORS_ALLOW_VERCEL_PREVIEWS || 'false').toLowerCase() === 'true';
+      const isVercelPreview = allowVercelPreviews && /\.vercel\.app$/.test(new URL(origin).hostname);
+
+      if (isExplicitlyAllowed || isVercelPreview) {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS origin not allowed'));
+    },
+    credentials: true,
+  })
+);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/teacher', teacherRoutes);
@@ -25,6 +48,10 @@ app.use('/api/notifications', notificationRoutes);
 
 app.get('/', (req, res) => {
   res.send('School Management API is running...');
+});
+
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ success: true, status: 'ok' });
 });
 
 app.use(errorHandler);
