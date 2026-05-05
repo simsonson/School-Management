@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: oklch(0.6 0.2 250);
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+  }
+}
