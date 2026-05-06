@@ -23,6 +23,8 @@ import OAuthCallback from './pages/OAuthCallback';
 import ReportsOverview from './pages/ReportsOverview';
 import Register from './pages/Register';
 import Announcements from './pages/Announcements';
+import Messages from './pages/Messages';
+import StudentChatbot from './pages/StudentChatbot';
 
 // Mock Dashboard for other roles
 const PlaceholderDashboard = ({ role }) => (
@@ -70,6 +72,7 @@ const App = () => {
                   <Route path="/homework" element={<AssignHomework />} />
                   <Route path="/marks" element={<UpdateMarks />} />
                   <Route path="/attendance" element={<AttendanceManagement />} />
+                  <Route path="/messages" element={<Messages />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>
@@ -84,6 +87,7 @@ const App = () => {
                   <Route path="/timetable" element={<StudentTimetable />} />
                   <Route path="/marks" element={<StudentMarks />} />
                   <Route path="/attendance" element={<StudentAttendance />} />
+                  <Route path="/study-buddy" element={<StudentChatbot />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>
@@ -97,6 +101,7 @@ const App = () => {
                   <Route path="/" element={<ParentDashboard />} />
                   <Route path="/children" element={<ParentDashboard />} />
                   <Route path="/fees" element={<ParentDashboard />} />
+                  <Route path="/messages" element={<Messages />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

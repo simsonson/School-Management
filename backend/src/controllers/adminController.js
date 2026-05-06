@@ -274,14 +274,18 @@ exports.deleteUser = async (req, res, next) => {
 // @access  Private (Admin)
 exports.toggleUserApproval = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id);
+    let user = await User.findById(req.params.id);
 
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    user.isApproved = !user.isApproved;
-    await user.save();
+    // Use findByIdAndUpdate to avoid triggering pre-save password hook
+    user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isApproved: !user.isApproved },
+      { new: true }
+    );
 
     res.status(200).json({
       success: true,

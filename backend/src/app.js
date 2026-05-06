@@ -8,6 +8,8 @@ const adminRoutes = require('./routes/adminRoutes');
 const studentRoutes = require('./routes/studentRoutes');
 const parentRoutes = require('./routes/parentRoutes');
 const principalRoutes = require('./routes/principalRoutes');
+const messageRoutes = require('./routes/messageRoutes');
+const chatbotRoutes = require('./routes/chatbotRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
@@ -45,6 +47,8 @@ app.use('/api/student', studentRoutes);
 app.use('/api/parent', parentRoutes);
 app.use('/api/principal', principalRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 app.get('/', (req, res) => {
   res.send('School Management API is running...');

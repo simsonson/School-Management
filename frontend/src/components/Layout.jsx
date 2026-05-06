@@ -16,7 +16,9 @@ import {
   X,
   Sun,
   Moon,
-  ShieldCheck
+  ShieldCheck,
+  MessageCircle,
+  Bot
 } from 'lucide-react';
 import api from '../lib/apiClient';
 
@@ -70,17 +72,20 @@ const Layout = ({ children }) => {
       { name: 'Attendance', icon: ClipboardList, path: '/teacher/attendance' },
       { name: 'Marks', icon: BookOpen, path: '/teacher/marks' },
       { name: 'Homework', icon: BookOpen, path: '/teacher/homework' },
+      { name: 'Messages', icon: MessageCircle, path: '/teacher/messages' },
     ],
     Student: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/student' },
       { name: 'Timetable', icon: Calendar, path: '/student/timetable' },
       { name: 'Marks', icon: BookOpen, path: '/student/marks' },
       { name: 'Attendance', icon: ClipboardList, path: '/student/attendance' },
+      { name: 'Study Buddy', icon: Bot, path: '/student/study-buddy' },
     ],
     Parent: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/parent' },
       { name: 'Children', icon: Users, path: '/parent/children' },
       { name: 'Fees', icon: CreditCard, path: '/parent/fees' },
+      { name: 'Messages', icon: MessageCircle, path: '/parent/messages' },
     ],
     Principal: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/principal' },
