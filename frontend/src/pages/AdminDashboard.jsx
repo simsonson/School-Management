@@ -174,6 +174,30 @@ const AdminDashboard = () => {
               </div>
               <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-white transition-colors" />
             </Link>
+            <Link to="/admin/principals" className="group flex items-center justify-between p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 hover:bg-rose-600 transition-all border border-transparent hover:border-rose-100">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 text-rose-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-gray-900 dark:text-white group-hover:text-white transition-colors">Principal</p>
+                  <p className="text-[10px] font-bold text-gray-400 group-hover:text-rose-100 transition-colors">Manage Leadership</p>
+                </div>
+              </div>
+              <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-white transition-colors" />
+            </Link>
+            <Link to="/admin/timetable" className="group flex items-center justify-between p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 hover:bg-cyan-600 transition-all border border-transparent hover:border-cyan-100">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 text-cyan-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-gray-900 dark:text-white group-hover:text-white transition-colors">Timetable</p>
+                  <p className="text-[10px] font-bold text-gray-400 group-hover:text-cyan-100 transition-colors">Master Schedule</p>
+                </div>
+              </div>
+              <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-white transition-colors" />
+            </Link>
             <Link to="/admin/announcements" className="group flex items-center justify-between p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 hover:bg-purple-600 transition-all border border-transparent hover:border-purple-100">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 text-purple-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">

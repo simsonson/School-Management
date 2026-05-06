@@ -123,7 +123,7 @@ exports.updateMarks = async (req, res, next) => {
   }
 };
 
-// @desc    Bulk Add or Update marks for multiple students
+// @desc    Bulk Add or Update marks for multiple students and subjects
 // @route   POST /api/teacher/marks/bulk
 // @access  Private (Teacher)
 exports.bulkUpdateMarks = async (req, res, next) => {
@@ -136,7 +136,7 @@ exports.bulkUpdateMarks = async (req, res, next) => {
 
     const markOperations = marks.map((m) => ({
       student: m.studentId,
-      subject,
+      subject: m.subject || subject, // Use subject from mark object or fallback to main subject
       examName,
       score: m.score,
       totalMarks: totalMarks || 100,
@@ -195,7 +195,10 @@ exports.getTeacherDashboard = async (req, res, next) => {
     });
 
     const marksUploaded = await Mark.countDocuments({ teacher: req.user.id });
-    const classesToday = await Timetable.find({ day: today.toLocaleDateString('en-US', { weekday: 'long' }) }).limit(5);
+    const classesToday = await Timetable.find({ 
+      day: today.toLocaleDateString('en-US', { weekday: 'long' }),
+      'periods.teacher': req.user.id
+    }).populate('periods.teacher', 'name').limit(5);
     const recentHomework = await Homework.find({ teacher: req.user.id })
       .sort({ createdAt: -1 })
       .limit(5);
@@ -270,7 +273,7 @@ exports.upsertTeacherTimetable = async (req, res, next) => {
       subject: period.subject,
       startTime: period.startTime,
       endTime: period.endTime,
-      teacher: req.user.id,
+      teacher: req.user.role === 'Admin' ? (period.teacherId || req.user.id) : req.user.id,
     }));
 
     const timetable = await Timetable.findOneAndUpdate(
@@ -303,6 +306,22 @@ exports.getTeacherTimetable = async (req, res, next) => {
       success: true,
       count: timetable.length,
       data: timetable,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Get all subjects
+// @route   GET /api/teacher/subjects
+// @access  Private (Teacher)
+exports.getSubjects = async (req, res, next) => {
+  try {
+    const Subject = require('../models/Subject');
+    const subjects = await Subject.find().sort({ name: 1 });
+    res.status(200).json({
+      success: true,
+      data: subjects
     });
   } catch (err) {
     next(err);

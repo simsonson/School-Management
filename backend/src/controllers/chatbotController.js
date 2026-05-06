@@ -1,4 +1,8 @@
 const User = require('../models/User');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// Initialize Gemini AI
+const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 
 // Subject knowledge base with topics and explanations
 const subjectData = {
@@ -460,15 +464,63 @@ exports.sendChatMessage = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Message is required' });
     }
 
-    const response = generateResponse(message, subject);
+    let reply = '';
+    let suggestions = [];
+    let topic = null;
+    let detectedSubject = subject;
+
+    // Try Gemini AI first if key is available
+    if (genAI) {
+      try {
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const chat = model.startChat({
+          history: [
+            {
+              role: "user",
+              parts: [{ text: "You are EduManage Study Buddy, an AI learning assistant for school students. Help them understand concepts in Mathematics, Science, English, Hindi, and Social Studies. Use Markdown for formatting. Keep answers concise and educational." }],
+            },
+            {
+              role: "model",
+              parts: [{ text: "Hello! I am EduManage Study Buddy. I'm ready to help students learn and understand their school subjects. How can I assist you today?" }],
+            },
+          ],
+          generationConfig: {
+            maxOutputTokens: 500,
+          },
+        });
+
+        const prompt = subject ? `[Subject: ${subject}] ${message}` : message;
+        const result = await chat.sendMessage(prompt);
+        const response = await result.response;
+        reply = response.text();
+        
+        // Basic suggestions based on the reply
+        suggestions = ['Explain more', 'Give an example', 'Practice question'];
+      } catch (aiErr) {
+        console.error('Gemini AI Error:', aiErr.message);
+        // Fallback to static response if AI fails
+        const fallback = generateResponse(message, subject);
+        reply = fallback.content;
+        suggestions = fallback.suggestions || [];
+        topic = fallback.topic || null;
+        detectedSubject = fallback.detectedSubject || subject;
+      }
+    } else {
+      // Use static knowledge base if no AI key
+      const response = generateResponse(message, subject);
+      reply = response.content;
+      suggestions = response.suggestions || [];
+      topic = response.topic || null;
+      detectedSubject = response.detectedSubject || subject;
+    }
 
     res.status(200).json({
       success: true,
       data: {
-        reply: response.content,
-        suggestions: response.suggestions || [],
-        topic: response.topic || null,
-        detectedSubject: response.detectedSubject || subject || null,
+        reply,
+        suggestions,
+        topic,
+        detectedSubject: detectedSubject || null,
       },
     });
   } catch (err) {

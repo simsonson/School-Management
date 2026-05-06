@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
@@ -21,6 +21,26 @@ import {
   Bot
 } from 'lucide-react';
 import api from '../lib/apiClient';
+
+const DigitalClock = () => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-end hidden md:flex">
+      <span className="text-sm font-black tabular-nums text-gray-900 dark:text-white leading-none">
+        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+      </span>
+      <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">
+        {time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+      </span>
+    </div>
+  );
+};
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -170,6 +190,7 @@ const Layout = ({ children }) => {
           </div>
           
           <div className="flex items-center gap-6">
+            <DigitalClock />
             <button
               onClick={toggleDarkMode}
               className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-800 rounded-lg transition-all"

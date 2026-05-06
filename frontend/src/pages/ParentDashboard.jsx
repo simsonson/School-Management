@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   User, 
   BookOpen, 
@@ -27,6 +28,7 @@ const ParentDashboard = () => {
   const [data, setData] = useState(null);
   const [performance, setPerformance] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchParentData = async () => {
@@ -87,7 +89,10 @@ const ParentDashboard = () => {
             </div>
           </div>
           <div className="flex gap-3">
-            <button className="flex items-center gap-2 bg-white text-indigo-600 px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg hover:bg-indigo-50 transition-all">
+            <button 
+              onClick={() => navigate('/parent/messages')}
+              className="flex items-center gap-2 bg-white text-indigo-600 px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg hover:bg-indigo-50 transition-all"
+            >
               <MessageCircle className="w-4 h-4" />
               Contact Teacher
             </button>

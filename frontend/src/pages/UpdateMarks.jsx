@@ -10,7 +10,9 @@ import {
   Plus,
   Users,
   BookOpen,
-  Upload
+  Upload,
+  X,
+  ChevronDown
 } from 'lucide-react';
 import Papa from 'papaparse';
 import api from '../lib/apiClient';
@@ -29,14 +31,19 @@ const UpdateMarks = () => {
   const [fetching, setFetching] = useState(false);
   const [status, setStatus] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [availableSubjects, setAvailableSubjects] = useState([]);
+  const [selectedSubjects, setSelectedSubjects] = useState([]);
+  const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [classRes] = await Promise.all([
+        const [classRes, subjectRes] = await Promise.all([
           api.get('/api/teacher/classes'),
+          api.get('/api/teacher/subjects'),
         ]);
         setClasses(classRes.data.data || []);
+        setAvailableSubjects(subjectRes.data.data || []);
       } catch (err) {
         console.error(err);
       }
@@ -53,10 +60,10 @@ const UpdateMarks = () => {
           // Filter students locally if the API doesn't support class filtering yet
           const filtered = res.data.data.filter(s => s.className === selectedClass);
           setStudents(filtered);
-          // Initialize marks state
+          // Initialize marks state: { studentId: { subject: score } }
           const initialMarks = {};
           filtered.forEach(s => {
-            initialMarks[s._id] = '';
+            initialMarks[s._id] = {};
           });
           setMarks(initialMarks);
         } catch (err) {
@@ -69,11 +76,22 @@ const UpdateMarks = () => {
     }
   }, [selectedClass]);
 
-  const handleMarkChange = (studentId, value) => {
+  const handleMarkChange = (studentId, subject, value) => {
     setMarks(prev => ({
       ...prev,
-      [studentId]: value
+      [studentId]: {
+        ...prev[studentId],
+        [subject]: value
+      }
     }));
+  };
+
+  const toggleSubject = (subject) => {
+    if (selectedSubjects.includes(subject)) {
+      setSelectedSubjects(selectedSubjects.filter(s => s !== subject));
+    } else {
+      setSelectedSubjects([...selectedSubjects, subject]);
+    }
   };
 
   const handleFileUpload = (e) => {
@@ -101,37 +119,45 @@ const UpdateMarks = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedClass || !examData.subject || !examData.examName) {
-      setStatus({ type: 'error', message: 'Please fill in all exam details.' });
+    if (!selectedClass || selectedSubjects.length === 0 || !examData.examName) {
+      setStatus({ type: 'error', message: 'Please fill in all exam details and select at least one subject.' });
       return;
     }
 
     setLoading(true);
     setStatus(null);
     try {
-      const payload = {
-        subject: examData.subject,
-        examName: examData.examName,
-        totalMarks: parseInt(examData.totalMarks),
-        marks: Object.keys(marks)
-          .filter(id => marks[id] !== '')
-          .map(id => ({
-            studentId: id,
-            score: parseInt(marks[id])
-          }))
-      };
+      const allMarks = [];
+      Object.keys(marks).forEach(studentId => {
+        selectedSubjects.forEach(subject => {
+          if (marks[studentId][subject] !== undefined && marks[studentId][subject] !== '') {
+            allMarks.push({
+              studentId,
+              subject,
+              score: parseInt(marks[studentId][subject])
+            });
+          }
+        });
+      });
 
-      if (payload.marks.length === 0) {
+      if (allMarks.length === 0) {
         setStatus({ type: 'error', message: 'Please enter marks for at least one student.' });
         setLoading(false);
         return;
       }
 
+      const payload = {
+        marks: allMarks,
+        examName: examData.examName,
+        totalMarks: parseInt(examData.totalMarks),
+      };
+
       await api.post('/api/teacher/marks/bulk', payload);
-      setStatus({ type: 'success', message: `Successfully saved marks for ${payload.marks.length} students!` });
-      // Reset marks but keep exam data for next class if needed
+      setStatus({ type: 'success', message: `Successfully saved ${allMarks.length} entries for ${selectedSubjects.length} subjects!` });
+      
+      // Reset marks
       const resetMarks = {};
-      students.forEach(s => resetMarks[s._id] = '');
+      students.forEach(s => resetMarks[s._id] = {});
       setMarks(resetMarks);
     } catch (err) {
       setStatus({ type: 'error', message: err.response?.data?.error || 'Failed to save marks' });
@@ -182,15 +208,44 @@ const UpdateMarks = () => {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Subject</label>
-                <input 
-                  type="text"
-                  placeholder="e.g. Mathematics"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
-                  value={examData.subject}
-                  onChange={(e) => setExamData({...examData, subject: e.target.value})}
-                />
+              <div className="relative">
+                <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Subjects</label>
+                <div 
+                  className="w-full px-4 py-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-sm font-bold flex flex-wrap gap-2 cursor-pointer min-h-[46px]"
+                  onClick={() => setShowSubjectDropdown(!showSubjectDropdown)}
+                >
+                  {selectedSubjects.length === 0 ? (
+                    <span className="text-gray-400">Select Subjects</span>
+                  ) : (
+                    selectedSubjects.map(s => (
+                      <span key={s} className="bg-indigo-600 text-white px-2 py-0.5 rounded-lg text-[10px] flex items-center gap-1">
+                        {s}
+                        <X 
+                          className="w-3 h-3 cursor-pointer hover:text-indigo-200" 
+                          onClick={(e) => { e.stopPropagation(); toggleSubject(s); }}
+                        />
+                      </span>
+                    ))
+                  )}
+                  <ChevronDown className="ml-auto w-4 h-4 text-gray-400" />
+                </div>
+                {showSubjectDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto">
+                    {availableSubjects.map(sub => (
+                      <div 
+                        key={sub._id}
+                        className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2 ${selectedSubjects.includes(sub.name) ? 'text-indigo-600 font-bold' : 'dark:text-gray-300'}`}
+                        onClick={() => toggleSubject(sub.name)}
+                      >
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedSubjects.includes(sub.name) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'}`}>
+                          {selectedSubjects.includes(sub.name) && <CheckCircle className="w-3 h-3 text-white" />}
+                        </div>
+                        {sub.name}
+                      </div>
+                    ))}
+                    {availableSubjects.length === 0 && <div className="px-4 py-2 text-xs text-gray-400 italic">No subjects found</div>}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -263,10 +318,13 @@ const UpdateMarks = () => {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-50/50 dark:bg-gray-800/50">
-                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest border-b border-gray-50 dark:border-gray-800">Student Name</th>
-                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest border-b border-gray-50 dark:border-gray-800">Email</th>
-                    <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest border-b border-gray-50 dark:border-gray-800 w-32">Marks Obtained</th>
-                    <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest border-b border-gray-50 dark:border-gray-800 w-24">Percentage</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest border-b border-gray-50 dark:border-gray-800 min-w-[200px]">Student Name</th>
+                    {selectedSubjects.map(sub => (
+                      <th key={sub} className="px-4 py-4 text-center text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest border-b border-gray-50 dark:border-gray-800 w-24">
+                        {sub}
+                      </th>
+                    ))}
+                    <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest border-b border-gray-50 dark:border-gray-800 w-24">Average</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
@@ -282,36 +340,41 @@ const UpdateMarks = () => {
                       </td>
                     </tr>
                   ) : filteredStudents.map((student) => {
-                    const score = marks[student._id] || 0;
-                    const percentage = examData.totalMarks > 0 ? (score / examData.totalMarks * 100).toFixed(0) : 0;
+                    const studentMarks = marks[student._id] || {};
+                    const scores = Object.values(studentMarks).filter(s => s !== '').map(Number);
+                    const average = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / (selectedSubjects.length * examData.totalMarks) * 100).toFixed(0) : 0;
                     
                     return (
                       <tr key={student._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
                               {student.name.charAt(0)}
                             </div>
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">{student.name}</span>
+                            <div className="overflow-hidden">
+                              <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{student.name}</p>
+                              <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate">{student.email}</p>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 font-medium">{student.email}</td>
-                        <td className="px-6 py-4">
-                          <input 
-                            type="number"
-                            max={examData.totalMarks}
-                            className="w-full text-right px-3 py-2 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-indigo-500 outline-none font-black text-gray-900 dark:text-white"
-                            placeholder="0"
-                            value={marks[student._id]}
-                            onChange={(e) => handleMarkChange(student._id, e.target.value)}
-                          />
-                        </td>
+                        {selectedSubjects.map(sub => (
+                          <td key={sub} className="px-4 py-4">
+                            <input 
+                              type="number"
+                              max={examData.totalMarks}
+                              className="w-full text-center px-2 py-2 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-indigo-500 outline-none font-black text-gray-900 dark:text-white text-xs"
+                              placeholder="-"
+                              value={studentMarks[sub] || ''}
+                              onChange={(e) => handleMarkChange(student._id, sub, e.target.value)}
+                            />
+                          </td>
+                        ))}
                         <td className="px-6 py-4 text-right">
                           <span className={`text-xs font-black px-2 py-1 rounded-lg ${
-                            percentage >= 80 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 
-                            percentage >= 50 ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                            average >= 80 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 
+                            average >= 50 ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                           }`}>
-                            {percentage}%
+                            {average}%
                           </span>
                         </td>
                       </tr>

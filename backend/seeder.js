@@ -11,6 +11,7 @@ const Student = require('./src/models/Student');
 const Homework = require('./src/models/Homework');
 const Mark = require('./src/models/Mark');
 const Fee = require('./src/models/Fee');
+const Subject = require('./src/models/Subject');
 
 // Load env vars
 dotenv.config();
@@ -53,8 +54,20 @@ const importData = async () => {
     await Homework.deleteMany();
     await Mark.deleteMany();
     await Fee.deleteMany();
+    await Subject.deleteMany();
 
     console.log('🗑️  Cleared existing data.');
+
+    // ── 0. Subjects ──────────────────────────────────────────────────
+    const subjectDocs = [];
+    for (const sName of subjects) {
+      const s = await Subject.create({
+        name: sName,
+        code: sName.substring(0, 3).toUpperCase(),
+      });
+      subjectDocs.push(s);
+    }
+    console.log('📚 Subjects created.');
 
     // ── 1. Principal ─────────────────────────────────────────────────
     const principal = await User.create({

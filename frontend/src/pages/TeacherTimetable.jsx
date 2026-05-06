@@ -4,21 +4,33 @@ import api from '../lib/apiClient';
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const TeacherTimetable = () => {
+const TeacherTimetable = ({ adminView = false }) => {
   const [classes, setClasses] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [timetableRows, setTimetableRows] = useState([]);
   const [form, setForm] = useState({
     className: '',
     day: 'Monday',
-    periods: [{ subject: '', startTime: '', endTime: '' }],
+    periods: [{ subject: '', startTime: '', endTime: '', teacherId: '' }],
   });
   const [message, setMessage] = useState('');
 
   const fetchClasses = async () => {
-    const res = await api.get('/api/teacher/classes');
-    setClasses(res.data.data || []);
-    if (!form.className && res.data.data?.length > 0) {
-      setForm((prev) => ({ ...prev, className: res.data.data[0].value }));
+    const res = await (adminView ? api.get('/api/admin/classes') : api.get('/api/teacher/classes'));
+    const data = adminView ? res.data.data.map(c => ({ ...c, value: `${c.name}${c.section ? `-${c.section}` : ''}` })) : res.data.data;
+    setClasses(data || []);
+    if (!form.className && data?.length > 0) {
+      setForm((prev) => ({ ...prev, className: data[0].value }));
+    }
+  };
+
+  const fetchTeachers = async () => {
+    if (!adminView) return;
+    try {
+      const res = await api.get('/api/admin/users/Teacher');
+      setTeachers(res.data.data || []);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -30,7 +42,8 @@ const TeacherTimetable = () => {
 
   useEffect(() => {
     fetchClasses().catch(() => setClasses([]));
-  }, []);
+    fetchTeachers();
+  }, [adminView]);
 
   useEffect(() => {
     fetchTimetable(form.className).catch(() => setTimetableRows([]));
@@ -47,7 +60,7 @@ const TeacherTimetable = () => {
   const addPeriod = () => {
     setForm((prev) => ({
       ...prev,
-      periods: [...prev.periods, { subject: '', startTime: '', endTime: '' }],
+      periods: [...prev.periods, { subject: '', startTime: '', endTime: '', teacherId: '' }],
     }));
   };
 
@@ -73,8 +86,8 @@ const TeacherTimetable = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Timetable Allocation</h1>
-        <p className="text-gray-500">Create and manage weekly class timetable for students.</p>
+        <h1 className="text-2xl font-bold text-gray-900">{adminView ? 'Master Timetable' : 'Timetable Allocation'}</h1>
+        <p className="text-gray-500">{adminView ? 'Manage school-wide class schedules and teacher assignments.' : 'Create and manage weekly class timetable for students.'}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -129,6 +142,19 @@ const TeacherTimetable = () => {
                 onChange={(e) => updatePeriod(idx, 'endTime', e.target.value)}
                 required
               />
+              {adminView && (
+                <select
+                  className="col-span-3 border border-gray-200 rounded-xl px-3 py-2 mt-1"
+                  value={period.teacherId}
+                  onChange={(e) => updatePeriod(idx, 'teacherId', e.target.value)}
+                  required
+                >
+                  <option value="">Select Teacher</option>
+                  {teachers.map((t) => (
+                    <option key={t._id} value={t._id}>{t.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
           ))}
 
@@ -151,12 +177,13 @@ const TeacherTimetable = () => {
                 <p className="font-semibold text-gray-800">{day}</p>
                 {dayMap[day]?.length ? (
                   <div className="mt-2 space-y-2">
-                    {dayMap[day].map((period, idx) => (
-                      <div key={idx} className="text-sm text-gray-600 flex justify-between">
-                        <span>{period.subject}</span>
-                        <span>{period.startTime} - {period.endTime}</span>
+                      <div key={idx} className="text-sm text-gray-600 flex justify-between border-b border-gray-50 pb-1 last:border-0">
+                        <div className="flex flex-col">
+                          <span className="font-bold">{period.subject}</span>
+                          {period.teacher && <span className="text-[10px] text-indigo-500 font-medium">with {period.teacher.name}</span>}
+                        </div>
+                        <span className="font-mono text-[11px] bg-gray-50 px-2 py-1 rounded-md h-fit">{period.startTime} - {period.endTime}</span>
                       </div>
-                    ))}
                   </div>
                 ) : (
                   <p className="text-xs text-gray-400 mt-1">No periods allocated.</p>

@@ -51,12 +51,14 @@ const App = () => {
                   <Route path="/" element={<AdminDashboard />} />
                   <Route path="/students" element={<UserManagement role="Student" />} />
                   <Route path="/teachers" element={<UserManagement role="Teacher" />} />
-                  <Route path="/parents" element={<UserManagement role="Parent" />} />
-                  <Route path="/admins" element={<UserManagement role="Admin" />} />
+                   <Route path="/parents" element={<UserManagement role="Parent" />} />
+                   <Route path="/principals" element={<UserManagement role="Principal" />} />
+                   <Route path="/admins" element={<UserManagement role="Admin" />} />
                   <Route path="/classes" element={<ClassManagement />} />
                   <Route path="/fees" element={<FeeManagement />} />
-                  <Route path="/announcements" element={<Announcements />} />
-                  <Route path="/reports" element={<ReportsOverview role="Admin" />} />
+                   <Route path="/announcements" element={<Announcements />} />
+                   <Route path="/timetable" element={<TeacherTimetable adminView={true} />} />
+                   <Route path="/reports" element={<ReportsOverview role="Admin" />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

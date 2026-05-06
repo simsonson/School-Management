@@ -9,7 +9,8 @@ const {
   getTeacherClasses,
   upsertTeacherTimetable,
   getTeacherTimetable,
-  bulkUpdateMarks
+  bulkUpdateMarks,
+  getSubjects
 } = require('../controllers/teacherController');
 const { protect, authorize } = require('../middleware/auth');
 const { requireFields, validateAttendanceStatus } = require('../middleware/validate');
@@ -30,6 +31,7 @@ router.get('/students', getStudents);
 router.post('/attendance', requireFields(['studentId', 'status', 'className']), validateAttendanceStatus, markAttendance);
 router.get('/dashboard', getTeacherDashboard);
 router.get('/classes', getTeacherClasses);
+router.get('/subjects', getSubjects);
 router.route('/timetable')
   .get(getTeacherTimetable)
   .post(requireFields(['className', 'day', 'periods']), upsertTeacherTimetable);
